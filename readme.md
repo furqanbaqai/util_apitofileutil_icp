@@ -41,7 +41,7 @@ python apitofileutil_icp.py \
   10 \
   page=1 per_page=10
 ```
- "https://restcountries.com/v3.1/all" "response.json" 1 transaction_key page=1 per_page=10
+ "https://api.github.com/repos/octocat/Spoon-Knife/issues" "response.json" transaction_key 1 page=1 per_page=10
 
  # Instructions for creating a single binary
  ```python
