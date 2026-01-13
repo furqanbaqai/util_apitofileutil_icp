@@ -31,14 +31,14 @@ Sample URL: https://api.github.com/repos/octocat/Spoon-Knife/issues?per_page=2&p
 python apitofileutil_icp.py \
   "https://api.github.com/repos/octocat/Spoon-Knife/issues" \
   "response_git_.json" \
+  10 \
   page=1 per_page=10
 
   python apitofileutil_icp.py \
   url="https://api.github.com/repos/octocat/Spoon-Knife/issues" \
-  output_file="response_git_.json" \
-  
+  output_file="response_git.json" \
   page=1 per_page=10
 ```
- "https://restcountries.com/v3.1/all" "response.json" fields=name,flags 
+ "https://restcountries.com/v3.1/all" "response.json" 1 page=1 per_page=10
 
  

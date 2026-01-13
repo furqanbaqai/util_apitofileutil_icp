@@ -18,9 +18,9 @@ def parse_params(param_items):
     return params
 
 
-def add_timestamp_to_filename(path, timestamp):
+def add_timestamp_to_filename(path, timestamp, pgnum=1):
     base, ext = os.path.splitext(path)
-    return f"{base}_{timestamp}{ext}"
+    return f"{base}_{timestamp}_{pgnum}{ext}"
 
 
 def build_url(base_url, params):
@@ -63,37 +63,45 @@ def main():
         help="Optional query parameters in key=value form (space-separated).",
     )
     args = parser.parse_args()
-
-    # Loop through the params, increase the page number and 
-
+    
     try:
         params = parse_params(args.params)        
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
-    final_url = build_url(args.url, params) if params else args.url
+    # Loop through the params, increase the page number and 
+    current_page = 1
+    print("Fetching response from URL: {0}. Iterating through pages {1}".format(args.url, args.max_pages ))
+    while current_page <= args.max_pages:
+        print(f"Processing page {current_page} of {args.max_pages} ...")
+        params['page'] = str(current_page)        
+        
+        final_url = build_url(args.url, params) if params else args.url
+        
+        try:
+            status, body = fetch(final_url)
+        except error.HTTPError as exc:
+            print(f"HTTP error: {exc.code} {exc.reason}", file=sys.stderr)
+            return 1
+        except error.URLError as exc:
+            print(f"Request failed: {exc.reason}", file=sys.stderr)
+            return 1
 
-    try:
-        status, body = fetch(final_url)
-    except error.HTTPError as exc:
-        print(f"HTTP error: {exc.code} {exc.reason}", file=sys.stderr)
-        return 1
-    except error.URLError as exc:
-        print(f"Request failed: {exc.reason}", file=sys.stderr)
-        return 1
+        if status not in (200, 201):
+            print(f"Unexpected status code: {status}", file=sys.stderr)
+            return 1
 
-    if status not in (200, 201):
-        print(f"Unexpected status code: {status}", file=sys.stderr)
-        return 1
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        out_path = add_timestamp_to_filename(args.output_file, timestamp, current_page)
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = add_timestamp_to_filename(args.output_file, timestamp)
+        with open(out_path, "wb") as f:
+            f.write(body)
 
-    with open(out_path, "wb") as f:
-        f.write(body)
+        print(f"Saved response to {out_path}")
+        current_page += 1
+        # While END;    
 
-    print(f"Saved response to {out_path}")
     return 0
 
 
