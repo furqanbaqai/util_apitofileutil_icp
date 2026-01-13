@@ -43,4 +43,18 @@ python apitofileutil_icp.py \
 ```
  "https://restcountries.com/v3.1/all" "response.json" 1 transaction_key page=1 per_page=10
 
- 
+ # Instructions for creating a single binary
+ ```python
+ # From repo root
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install pyinstaller
+
+# Build a single-file exe (no UPX compression)
+pyinstaller --onefile --noupx --name apitofileutil_icp apitofileutil_icp.py
+
+# Build a directory-based exe (no UPX compression)
+pyinstaller --onedir --noupx --name apitofileutil_icp apitofileutil_icp.py
+
+ ```
