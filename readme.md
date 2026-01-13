@@ -35,10 +35,12 @@ python apitofileutil_icp.py \
   page=1 per_page=10
 
   python apitofileutil_icp.py \
-  url="https://api.github.com/repos/octocat/Spoon-Knife/issues" \
+  "https://api.github.com/repos/octocat/Spoon-Knife/issues" \
   output_file="response_git.json" \
+  transaction_key \
+  10 \
   page=1 per_page=10
 ```
- "https://restcountries.com/v3.1/all" "response.json" 1 page=1 per_page=10
+ "https://restcountries.com/v3.1/all" "response.json" 1 transaction_key page=1 per_page=10
 
  

@@ -34,8 +34,11 @@ def build_url(base_url, params):
     )
 
 
-def fetch(url):
-    req = request.Request(url, method="GET")
+def fetch(url, transaction_key=None):
+    headers = {}
+    if transaction_key:
+        headers["x-transaction-key"] = transaction_key
+    req = request.Request(url, headers=headers, method="GET")
     with request.urlopen(req) as resp:
         status = resp.getcode()
         body = resp.read()
@@ -46,10 +49,18 @@ def main():
     parser = argparse.ArgumentParser(
         description="Call a URL with GET and save the response to a timestamped file."
     )
-    parser.add_argument("url", help="Base URL to call, without or with query parameters.")
+    parser.add_argument(
+        "url", 
+        help="Base URL to call, without or with query parameters.")
     parser.add_argument(
         "output_file",
         help="Path to the output file (timestamp will be appended before the extension).",
+    )
+    parser.add_argument(
+        "transaction_key",
+        type=str,
+        # dest="transaction_key",
+        help="x-transaction-key header value.",
     )
     parser.add_argument(
         "max_pages",
@@ -62,6 +73,7 @@ def main():
         nargs="*",
         help="Optional query parameters in key=value form (space-separated).",
     )
+
     args = parser.parse_args()
     
     try:
@@ -80,7 +92,7 @@ def main():
         final_url = build_url(args.url, params) if params else args.url
         
         try:
-            status, body = fetch(final_url)
+            status, body = fetch(final_url, args.transaction_key)
         except error.HTTPError as exc:
             print(f"HTTP error: {exc.code} {exc.reason}", file=sys.stderr)
             return 1
