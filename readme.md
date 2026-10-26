@@ -1,60 +1,119 @@
-# Introduction
-Implemented a CLI utility that builds a GET URL with query params, calls it, and writes the response to a timestamped output file when the status is 200/201. Added argument parsing, URL/query handling, and safe filename timestamping in apitofileutil_icp.py.
+# API to File Utility
 
-# Details
+A Python command-line utility that fetches numbered API pages using HTTP GET and saves each successful response to a timestamped file. Responses are saved as raw bytes, so the utility can store JSON, text, or other response formats.
 
-apitofileutil_icp.py now accepts url, output_file, and optional key=value params.
-Builds the final URL including existing query params, performs GET, and writes to output_file_YYYYMMDD_HHMMSS.ext on success.
-Example
+## Requirements
+
+- Python 3.6 or later.
+- Network access to the API endpoint.
+- An existing, writable output directory.
+
+The script uses only the Python standard library; no packages need to be installed to run it. Run the commands below from the repository directory.
+
+## Usage
+
+```text
+python apitofileutil_icp.py URL OUTPUT_FILE TRANSACTION_KEY MAX_PAGES [key=value ...]
 ```
-python util_apitofileutil_icp/apitofileutil_icp.py \
-  "https://example.com/api" \
-  "response.json" \
-  foo=bar limit=10
+
+| Argument | Description |
+| --- | --- |
+| `URL` | API URL, optionally including existing query parameters. |
+| `OUTPUT_FILE` | Output path, such as `response.json`. A timestamp and page number are inserted before the final extension. |
+| `TRANSACTION_KEY` | Value sent in the `x-transaction-key` header. This positional argument is required. An empty string omits the header when the shell passes it through. |
+| `MAX_PAGES` | Required integer specifying how many pages to request, starting at page 1. Supply a positive value to fetch data; zero or negative values produce no requests or files. |
+| `key=value` | Optional, space-separated query parameters. Quote an entire argument if its value contains spaces. |
+
+Display built-in help:
+
+```powershell
+python apitofileutil_icp.py --help
 ```
-Next steps (optional)
 
-Run a quick manual call against a known endpoint to verify output.
-Add a small README or usage note if this is for other users.
+### Fetch one page
 
-## Example Usage
-Sample URL: https://restcountries.com/v3.1/all?fields=name,flags
-```bash
-python apitofileutil_icp.py \
-  "https://restcountries.com/v3.1/all" \
-  "response.json" \
-  fields=name,flags
+Replace the example URL and transaction key with your API's values:
+
+```powershell
+python apitofileutil_icp.py "https://example.com/api/items" "response.json" "YOUR_TRANSACTION_KEY" 1 "limit=10"
 ```
-## Example Usage 2
-Sample URL: https://api.github.com/repos/octocat/Spoon-Knife/issues?per_page=2&page=1
-```bash
-python apitofileutil_icp.py \
-  "https://api.github.com/repos/octocat/Spoon-Knife/issues" \
-  "response_git_.json" \
-  10 \
-  page=1 per_page=10
 
-  python apitofileutil_icp.py \
-  "https://api.github.com/repos/octocat/Spoon-Knife/issues" \
-  output_file="response_git.json" \
-  transaction_key \
-  10 \
-  page=1 per_page=10
+### Fetch multiple pages
+
+```powershell
+python apitofileutil_icp.py "https://example.com/api/items?status=active" "response.json" "YOUR_TRANSACTION_KEY" 3 "limit=10" "category=office supplies"
 ```
- "https://api.github.com/repos/octocat/Spoon-Knife/issues" "response.json" transaction_key 1 page=1 per_page=10
 
- # Instructions for creating a single binary
- ```python
- # From repo root
+This requests pages 1, 2, and 3 and creates files such as:
+
+```text
+response_20261026_143015_1.json
+response_20261026_143016_2.json
+response_20261026_143017_3.json
+```
+
+The timestamp uses the machine's local time and is generated separately for each response. The output directory is preserved. Existing files with the same generated name are overwritten.
+
+## Request and output behavior
+
+- Additional query parameters replace matching parameters already present in the URL. Unrelated parameters are preserved.
+- Repeated command-line keys use the last supplied value. Empty values and values containing `=` are supported; empty keys are rejected.
+- The script controls the `page` parameter, overriding any page value in the URL or command-line parameters.
+- Pagination runs through `MAX_PAGES` unless an error occurs. Empty responses and pagination metadata do not stop the loop.
+- Only HTTP status codes `200` and `201` are accepted for saving a response.
+- Response bytes are written unchanged, without decoding or JSON formatting. Each response is read fully into memory before writing.
+- Requests run sequentially. There is no retry logic or explicitly configured request timeout.
+- On a request failure, processing stops and previously saved files remain.
+
+## Exit codes and errors
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Processing completed. This also applies when `MAX_PAGES` is zero or negative. |
+| `1` | HTTP/network failure or a response status other than `200` or `201`. |
+| `2` | Invalid command-line arguments or malformed `key=value` parameters. |
+
+Request and parameter errors are printed to standard error. File-system errors, such as a missing output directory or insufficient write permissions, propagate as Python exceptions.
+
+## Code overview
+
+Each function has a docstring describing its role and relevant behavior.
+
+| Function | Responsibility |
+| --- | --- |
+| `parse_params` | Validate query arguments and convert them into a dictionary. |
+| `add_timestamp_to_filename` | Insert the timestamp and page number before the final file extension. |
+| `build_url` | Merge and encode query parameters while preserving other URL components. |
+| `fetch` | Perform a GET request with the optional transaction header and return the status and raw response bytes. |
+| `main` | Parse CLI arguments, iterate through pages, handle request errors, and save responses. |
+
+## Build a Windows executable
+
+PyInstaller is required only for packaging. In PowerShell, create and activate a virtual environment:
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install pyinstaller
+```
 
-# Build a single-file exe (no UPX compression)
+Build a single executable:
+
+```powershell
 pyinstaller --onefile --noupx --name apitofileutil_icp apitofileutil_icp.py
+```
 
-# Build a directory-based exe (no UPX compression)
+The executable is written to `dist\apitofileutil_icp.exe`.
+
+Alternatively, build a directory containing the executable and its dependencies:
+
+```powershell
 pyinstaller --onedir --noupx --name apitofileutil_icp apitofileutil_icp.py
+```
 
- ```
+The directory is written to `dist\apitofileutil_icp`. Use the same arguments as the Python script:
+
+```powershell
+.\dist\apitofileutil_icp.exe "https://example.com/api/items" "response.json" "YOUR_TRANSACTION_KEY" 3 "limit=10"
+```
