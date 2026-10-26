@@ -3,7 +3,7 @@ import argparse
 import os
 import sys
 from datetime import datetime
-from urllib import parse, request, error
+from urllib import error, parse, request
 
 
 def parse_params(param_items):
@@ -30,7 +30,13 @@ def build_url(base_url, params):
         existing[key] = [value]
     new_query = parse.urlencode(existing, doseq=True)
     return parse.urlunsplit(
-        (url_parts.scheme, url_parts.netloc, url_parts.path, new_query, url_parts.fragment)
+        (
+            url_parts.scheme,
+            url_parts.netloc,
+            url_parts.path,
+            new_query,
+            url_parts.fragment,
+        )
     )
 
 
@@ -50,8 +56,8 @@ def main():
         description="Call a URL with GET and save the response to a timestamped file."
     )
     parser.add_argument(
-        "url", 
-        help="Base URL to call, without or with query parameters.")
+        "url", help="Base URL to call, without or with query parameters."
+    )
     parser.add_argument(
         "output_file",
         help="Path to the output file (timestamp will be appended before the extension).",
@@ -75,22 +81,24 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     try:
-        params = parse_params(args.params)        
+        params = parse_params(args.params)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
-    # Loop through the params, increase the page number and 
+    # Loop through the params, increase the page number and
     current_page = 1
-    print("Fetching response from URL: {0}. Iterating through pages {1}".format(args.url, args.max_pages ))
+    print(
+        f"Fetching response from URL: {args.url}. Iterating through pages {args.max_pages}"
+    )
     while current_page <= args.max_pages:
         print(f"Processing page {current_page} of {args.max_pages} ...")
-        params['page'] = str(current_page)        
-        
+        params["page"] = str(current_page)
+
         final_url = build_url(args.url, params) if params else args.url
-        
+
         try:
             status, body = fetch(final_url, args.transaction_key)
         except error.HTTPError as exc:
@@ -112,7 +120,7 @@ def main():
 
         print(f"Saved response to {out_path}")
         current_page += 1
-        # While END;    
+        # While END;
 
     return 0
 
